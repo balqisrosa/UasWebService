@@ -1,6 +1,7 @@
 package product
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -169,4 +170,34 @@ func DeleteProduct(w http.ResponseWriter, r *http.Request) {
         "message": "product deleted successfully",
     })
 }
+// GetProductByID
+func GetProductByID(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    idStr, ok := vars["id"]
+    if !ok {
+        http.Error(w, "ID not provided", http.StatusBadRequest)
+        return
+    }
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        http.Error(w, "Invalid ID", http.StatusBadRequest)
+        return
+    }
+
+    var product product.Product
+    query := "SELECT * FROM products WHERE id = ?"
+    err = database.DB.QueryRow(query, id).Scan(&product.ProductId, &product.Name, &product.Price, &product.Stock, &product.Description)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            http.Error(w, "Product not found", http.StatusNotFound)
+        } else {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+        }
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(product)
+}
+
 

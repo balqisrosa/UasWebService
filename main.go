@@ -24,6 +24,7 @@ func main() {
 
 	//Route handler product
 	router.HandleFunc("/products", product.GetProduct).Methods("GET")
+	router.HandleFunc("/products/{id}", product.GetProductByID).Methods("GET")
 	router.HandleFunc("/products", auth.JWTAuth(product.PostProduct)).Methods("POST")
 	router.HandleFunc("/products/{id}", auth.JWTAuth(product.PutProduct)).Methods("PUT")
 	router.HandleFunc("/products/{id}", auth.JWTAuth(product.DeleteProduct)).Methods("DELETE")
