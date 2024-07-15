@@ -164,7 +164,7 @@ func DeleteOrder(w http.ResponseWriter, r *http.Request) {
 		DELETE FROM orders
 		WHERE order_id = ?`
 
-	// Execute the SQL statementz
+	// Execute the SQL statement
 	result, err := database.DB.Exec(query, id)
 	if err != nil {
 		http.Error(w, "Failed to delete order: "+err.Error(), http.StatusInternalServerError)
@@ -188,4 +188,47 @@ func DeleteOrder(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "order deleted successfully",
 	})
+}
+package order
+
+import (
+    "database/sql"
+    "encoding/json"
+    "net/http"
+    "strconv"
+
+    "github.com/gorilla/mux"
+    _ "github.com/go-sql-driver/mysql"
+)
+
+// Database connection (this should be initialized elsewhere in your application)
+var database *sql.DB
+
+func GetOrderByID(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    idStr, ok := vars["id"]
+    if !ok {
+        http.Error(w, "ID not provided", http.StatusBadRequest)
+        return
+    }
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        http.Error(w, "Invalid ID", http.StatusBadRequest)
+        return
+    }
+
+    var order Order
+    query := "SELECT order_id, user_id, product_id, amount, price, total, status FROM orders WHERE order_id = ?"
+    err = database.QueryRow(query, id).Scan(&order.OrderId, &order.UserId, &order.ProductId, &order.Amount, &order.Price, &order.Total, &order.Status)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            http.Error(w, "Order not found", http.StatusNotFound)
+        } else {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+        }
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(order)
 }
