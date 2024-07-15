@@ -85,20 +85,13 @@ func PostOrder(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-	// Get the last inserted ID
-	id, err := res.LastInsertId()
-	if err != nil {
-		http.Error(w, "Failed to retrieve last insert ID: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Return the newly created ID in the response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "order added successfully",
 		"id": id,
 	})
-}
+
 
 func PutOrder(w http.ResponseWriter, r *http.Request) {
 	// Mengambil Id dari URL
