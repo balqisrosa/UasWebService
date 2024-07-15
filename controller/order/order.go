@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-
 	"onlineshop/database"
 	"github.com/gorilla/mux"
 	"onlineshop/model/order"
 )
 
 func GetOrder(w http.ResponseWriter, r *http.Request) {
-	rows, err := database.DB.Query("SELECT order_id, user_id, product_id, amount, price, total, status FROM orders")
+	rows, err := database.DB.Query("SELECT * FROM orders")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -43,15 +42,21 @@ func PostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch product price from products table
-	err := database.DB.QueryRow("SELECT price FROM products WHERE product_id = ?", pc.ProductId).Scan(&pc.Price)
-	if err != nil {
-		http.Error(w, "Product not found: "+err.Error(), http.StatusBadRequest)
+	// Validasi status
+	if pc.Status != "sukses" && pc.Status != "gagal" {
+		http.Error(w, "Invalid status value", http.StatusBadRequest)
 		return
 	}
 
-	// Calculate total
-	pc.Total = float64(pc.Amount) * pc.Price
+	// Ambil harga produk dari tabel products
+	var price float64
+	err := database.DB.QueryRow("SELECT price FROM products WHERE product_id = ?", pc.ProductId).Scan(&price)
+	if err != nil {
+		http.Error(w, "Failed to get product price: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	pc.Price = price
+	pc.Total = price * float64(pc.Amount)
 
 	// Prepare the SQL statement for inserting a new order
 	query := `
@@ -76,7 +81,7 @@ func PostOrder(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "order added successfully",
-		"id":      id,
+		"id": id,
 	})
 }
 
@@ -101,14 +106,10 @@ func PutOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch product price if amount is updated
-	if pc.Amount != 0 {
-		err := database.DB.QueryRow("SELECT price FROM products WHERE product_id = ?", pc.ProductId).Scan(&pc.Price)
-		if err != nil {
-			http.Error(w, "Product not found: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		pc.Total = float64(pc.Amount) * pc.Price
+	// Validasi status
+	if pc.Status != "sukses" && pc.Status != "gagal" {
+		http.Error(w, "Invalid status value", http.StatusBadRequest)
+		return
 	}
 
 	// Prepare the SQL statement for updating the order
@@ -117,7 +118,7 @@ func PutOrder(w http.ResponseWriter, r *http.Request) {
 	SET user_id=?, product_id=?, amount=?, price=?, total=?, status=?
 	WHERE order_id=?`
 
-	// Execute the SQL Statement
+	// Execute the SQL statement
 	result, err := database.DB.Exec(query, pc.UserId, pc.ProductId, pc.Amount, pc.Price, pc.Total, pc.Status, id)
 	if err != nil {
 		http.Error(w, "Failed to update order: "+err.Error(), http.StatusInternalServerError)
@@ -158,7 +159,7 @@ func DeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prepare the SQL statement for deleting a category admin
+	// Prepare the SQL statement for deleting an order
 	query := `
 		DELETE FROM orders
 		WHERE order_id = ?`
@@ -187,4 +188,32 @@ func DeleteOrder(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "order deleted successfully",
 	})
+}
+func GetOrderByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	idStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "ID not provided", http.StatusBadRequest)
+		return
+	}
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var order Order
+	query := "SELECT order_id, user_id, product_id, amount, price, total, status FROM orders WHERE order_id = ?"
+	err = database.DB.QueryRow(query, id).Scan(&order.OrderID, &order.UserID, &order.ProductID, &order.Amount, &order.Price, &order.Total, &order.Status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Order not found", http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(order)
 }
