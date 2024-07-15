@@ -7,7 +7,6 @@ import (
 	"onlineshop/database"
 	"github.com/gorilla/mux"
 	"onlineshop/model/order"
-	"database/sql"
 )
 
 func GetOrder(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +43,8 @@ func PostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validasi status
-	if pc.Status != "sukses" && pc.Status != "gagal" {
-		http.Error(w, "Invalid status value", http.StatusBadRequest)
+	if pc.Status != "completed" && pc.Status != "shipped" && pc.Status != "pending" {
+		http.Error(w, "Invalid status value. Status must be 'completed', 'shipped', or 'pending'", http.StatusBadRequest)
 		return
 	}
 
@@ -86,6 +85,21 @@ func PostOrder(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+	// Get the last inserted ID
+	id, err := res.LastInsertId()
+	if err != nil {
+		http.Error(w, "Failed to retrieve last insert ID: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the newly created ID in the response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "order added successfully",
+		"id": id,
+	})
+}
+
 func PutOrder(w http.ResponseWriter, r *http.Request) {
 	// Mengambil Id dari URL
 	vars := mux.Vars(r)
@@ -108,8 +122,8 @@ func PutOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validasi status
-	if pc.Status != "sukses" && pc.Status != "gagal" {
-		http.Error(w, "Invalid status value", http.StatusBadRequest)
+	if pc.Status != "completed" && pc.Status != "shipped" && pc.Status != "pending" {
+		http.Error(w, "Invalid status value. Status must be 'completed', 'shipped', or 'pending'", http.StatusBadRequest)
 		return
 	}
 
@@ -190,7 +204,6 @@ func DeleteOrder(w http.ResponseWriter, r *http.Request) {
 		"message": "order deleted successfully",
 	})
 }
-
 func GetOrderByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	idStr, ok := vars["id"]
