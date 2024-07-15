@@ -31,7 +31,7 @@ func main() {
 
 	//Return the response
 	router.HandleFunc("/orders", order.GetOrder).Methods("GET")
-	router.HandleFunc("/orders/{id}", product.GetOrderByID).Methods("GET")
+	router.HandleFunc("/orders/{id}", order.GetOrderByID).Methods("GET")
 	router.HandleFunc("/orders", auth.JWTAuth(order.PostOrder)).Methods("POST")
 	router.HandleFunc("/orders/{id}", auth.JWTAuth(order.PutOrder)).Methods("PUT")
 	router.HandleFunc("/orders/{id}", auth.JWTAuth(order.DeleteOrder)).Methods("DELETE")
