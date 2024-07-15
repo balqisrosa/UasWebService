@@ -168,7 +168,7 @@ func GetProductByID(w http.ResponseWriter, r *http.Request) {
 
     var product product.Product
     query := "SELECT * FROM products WHERE product_id = ?"
-    err = database.DB.QueryRow(query, id).Scan(&product.Product_Id, &product.Name, &product.Price, &product.Stock, &product.Description)
+    err = database.DB.QueryRow(query, id).Scan(&product.ProductId, &product.Name, &product.Price, &product.Stock, &product.Description)
     if err != nil {
         if err == sql.ErrNoRows {
             http.Error(w, "Product not found", http.StatusNotFound)
